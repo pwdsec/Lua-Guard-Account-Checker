@@ -52,7 +52,7 @@ def get_tokens_from_file(file, key)
     email, pass = line.split(":")
     token = get_token(email, pass, key)
     if token.nil?
-      puts "\e[31m" + line + "\e[0m"
+      File.write(file, File.readlines(file).reject { |l| l.include?(line) }.join)
     else
       plan = get_plan(token)
       puts "\e[32m" + line + "\e[0m" + " - " + plan
